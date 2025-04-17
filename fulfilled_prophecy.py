@@ -4,7 +4,8 @@ import warnings
 import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from nltk.corpus import stopwords
+from nltk import corpus
+#from nltk.corpus import stopwords
 import streamlit as st
 # streamlit run fulfilled_prophecy.py
 
