@@ -1,139 +1,130 @@
+import os
+import joblib
 import numpy as np
 import pandas as pd
-import warnings
 import nltk
+import warnings
+import streamlit as st
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from nltk.corpus import stopwords
-import streamlit as st
-# streamlit run fulfilled_prophecy.py
 
 # Suppress warnings
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
-# Download necessary NLTK resources
-#nltk.download('stopwords')
+# Download NLTK stopwords
+#nltk.download("stopwords")
+stop_words = ['all', 'to', 'any', "he'd", "we've", 'this', 'have', 'whom', "isn't", "wasn't", 'own', 'now', 'do', "mightn't", 'but', 'yourselves', 'under', "i've", 'his', 'is', "haven't", 'over', 'doesn', "he's", 'her', 'your', "you've", 'each', 'the', "she'll", 'did', "you'll", 'until', "wouldn't", 'during', 'some', 'he', 'than', "didn't", 'then', 'with', 'had', "it's", 'and', "should've", 'few', "it'll", 'there', 'which', 'why', "we're", 'should', 'other', "i'll", 'an', 'been', 'herself', "needn't", 'above', "hasn't", 'both', 'will', 'only', "we'll", 'before', 'here', "we'd", 'again', 'what', "you'd", "shouldn't", 'has', 'me', "i'd", 'were', "aren't", 'so', "she's", "hadn't", 'she', 'o', 'from', 'on', 'ours', "they've", 'very', "don't", 'down', 'further', 'it', 'by', 'once', 'if', 'doing', 'are', 'no', 'i', 'through', 'yours', 'about', "she'd", 'most', 'how', "mustn't", 'as', 'myself', 'being', 'their', 'was', 'between', 'or', 'into', 'when', 'them', "they're", 'him', "couldn't", 'shouldn', 'who', 'my', "doesn't", 'where', 'at', 'off', 'yourself', 'for', 'its', "won't", 'such', "he'll", 'hers', 'be', 'after', 'not', 'same', 'these', 'that', 'below', "shan't", "they'll", 'nor', 'they', 'having', 'too', 'himself', 'those', 'out', "i'm", 'itself', 'just', 'while', 'does', "that'll", 'theirs', "they'd", 'in', 'can', 'of', 'am', 'because', "it'd", 'more', 'you', "weren't", 'we', 'themselves', 'ourselves', 'a', "you're", 'up', 'our', 'against']
 
-stop_words = ['all', 'd', 'to', 'any', "he'd", "we've", 'this', 'have', 'whom', "isn't", "wasn't", 'own', 'now', 'do', "mightn't", 'but', 'didn', 'yourselves', 'under', "i've", 'ma', 'll', 'his', 've', 'is', "haven't", 'over', 'doesn', "he's", 'her', 'y', 'your', "you've", 'each', 'the', "she'll", 'did', "you'll", 'until', "wouldn't", 'during', 'some', 'he', 'than', "didn't", 'then', 'with', 'weren', 'had', "it's", 'and', 'don', "should've", 'few', "it'll", 'there', 'which', 'why', 'hadn', "we're", 'should', 'other', "i'll", 'an', 'been', 'mustn', 'herself', "needn't", 'above', "hasn't", 'both', 'will', 'only', "we'll", 'before', 'here', "we'd", 'mightn', 'again', 'what', "you'd", "shouldn't", 'ain', 'has', 'me', "i'd", 'were', "aren't", 'so', "she's", "hadn't", 'she', 'o', 'from', 'haven', 'on', 'ours', "they've", 'very', "don't", 'down', 'further', 'it', 'by', 'once', 'if', 'doing', 'are', 'no', 'i', 'through', 'yours', 'about', "she'd", 'most', 'how', "mustn't", 'as', 'couldn', 'myself', 'being', 'their', 'was', 'between', 'wasn', 'isn', 'or', 'into', 'when', 'them', 're', "they're", 't', 'him', "couldn't", 'shouldn', 'who', 'my', "doesn't", 'where', 'at', 'off', 'hasn', 'yourself', 'for', 'its', "won't", 'such', "he'll", 'hers', 'be', 'wouldn', 's', 'after', 'not', 'same', 'these', 'that', 'below', "shan't", "they'll", 'nor', 'they', 'having', 'too', 'himself', 'those', 'out', "i'm", 'itself', 'just', 'while', 'does', "that'll", 'theirs', "they'd", 'in', 'can', 'of', 'am', 'because', "it'd", 'm', 'more', 'you', "weren't", 'we', 'won', 'themselves', 'ourselves', 'a', 'aren', "you're", 'up', 'shan', 'our', 'against', 'needn']
-
-# Streamlit Page Configuration
+# Streamlit page setup
 st.set_page_config(page_title="Prophecy Fulfillment", layout="wide")
-##################################################################################################################
-# Cache Data Loading
+
+# Load and clean data
 @st.cache_data
-def load_prophets():
-    prophets = pd.read_csv("t_bbe.csv").dropna()
-    
-    # Map book numbers to book names
-    prophets_names = {
-        1: 'Genesis', 2: 'Exodus', 3: 'Leviticus', 4: 'Numbers', 5: 'Deuteronomy',
-        6: 'Joshua', 7: 'Judges', 8: 'Ruth', 9: '1 Samuel', 10: '2 Samuel',
-        11: '1 Kings', 12: '2 Kings', 13: '1 Chronicles', 14: '2 Chronicles',
-        15: 'Ezra', 16: 'Nehemiah', 17: 'Esther', 18: 'Job', 19: 'Psalms',
-        20: 'Proverbs', 21: 'Ecclesiastes', 22: 'Song of Solomon', 23: 'Isaiah',
-        24: 'Jeremiah', 25: 'Lamentations', 26: 'Ezekiel', 27: 'Daniel',
-        28: 'Hosea', 29: 'Joel', 30: 'Amos', 31: 'Obadiah', 32: 'Jonah',
-        33: 'Micah', 34: 'Nahum', 35: 'Habakkuk', 36: 'Zephaniah', 37: 'Haggai',
-        38: 'Zechariah', 39: 'Malachi'
-    }
-    # Map book numbers to names
-    prophets['Book Name'] = prophets['b'].map(prophets_names)
 
-    # Process text: Remove stopwords
+def load_data(file_path, book_map):
+    df = pd.read_csv(file_path).dropna()
+    df['Book Name'] = df['b'].map(book_map)
     #stop_words = set(stopwords.words('english'))
-    prophets['corpus'] = prophets['t'].astype(str).str.lower().apply(
-        lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
+    df['corpus'] = df['t'].astype(str).str.lower().apply(
+        lambda x: ' '.join([word for word in x.split() if word not in stop_words])
+    )
+    return df
 
-    return prophets, prophets_names
+# Old Testament
+prophets_map = {i: name for i, name in enumerate([
+    'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy',
+    'Joshua', 'Judges', 'Ruth', '1 Samuel', '2 Samuel',
+    '1 Kings', '2 Kings', '1 Chronicles', '2 Chronicles', 'Ezra',
+    'Nehemiah', 'Esther', 'Job', 'Psalms', 'Proverbs',
+    'Ecclesiastes', 'Song of Solomon', 'Isaiah', 'Jeremiah',
+    'Lamentations', 'Ezekiel', 'Daniel', 'Hosea', 'Joel',
+    'Amos', 'Obadiah', 'Jonah', 'Micah', 'Nahum',
+    'Habakkuk', 'Zephaniah', 'Haggai', 'Zechariah', 'Malachi'
+], start=1)}
 
-# Load data
-prophets, prophets_names = load_prophets()
-##################################################################################################################
-# Cache Data Loading
-@st.cache_data
-def load_fulfilled():
-    fulfilled = pd.read_csv("t_bbe.csv").dropna()
-    
-    # Map book numbers to book names
-    fulfilled_names = {
-        40: 'Matthew', 41: 'Mark', 42: 'Luke',
-        43: 'John', 44: 'Acts', 45: 'Romans', 46: '1 Corinthians',
-        47: '2 Corinthians', 48: 'Galatians', 49: 'Ephesians', 50: 'Philippians',
-        51: 'Colossians', 52: '1 Thessalonians', 53: '2 Thessalonians',
-        54: '1 Timothy', 55: '2 Timothy', 56: 'Titus', 57: 'Philemon',
-        58: 'Hebrews', 59: 'James', 60: '1 Peter', 61: '2 Peter',
-        62: '1 John', 63: '2 John', 64: '3 John', 65: 'Jude', 66: 'Revelation'
-    }
-    # Map book numbers to names
-    fulfilled['Book Name'] = fulfilled['b'].map(fulfilled_names)
+# New Testament
+fulfilled_map = {i: name for i, name in enumerate([
+    'Matthew', 'Mark', 'Luke', 'John', 'Acts', 'Romans',
+    '1 Corinthians', '2 Corinthians', 'Galatians', 'Ephesians', 'Philippians',
+    'Colossians', '1 Thessalonians', '2 Thessalonians', '1 Timothy', '2 Timothy',
+    'Titus', 'Philemon', 'Hebrews', 'James', '1 Peter', '2 Peter',
+    '1 John', '2 John', '3 John', 'Jude', 'Revelation'
+], start=40)}
 
-    # Process text: Remove stopwords
-    #stop_words = set(stopwords.words('english'))
-    fulfilled['corpus'] = fulfilled['t'].astype(str).str.lower().apply(
-        lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
+prophets = load_data("t_bbe.csv", prophets_map)
+fulfilled = load_data("t_bbe.csv", fulfilled_map)
 
-    return fulfilled, fulfilled_names
-
-# Load data
-fulfilled, fulfilled_names = load_fulfilled()
-##################################################################################################################
-# Compute TF-IDF & Cosine Similarity
+# TF-IDF Similarity with joblib caching
 @st.cache_resource
 def compute_similarity():
-    vectorizer = TfidfVectorizer()
-    tf_idf_matrix = vectorizer.fit_transform(fulfilled['corpus'])
+    vec_path = "tfidf_vectorizer.joblib"
+    mat_path = "tfidf_matrix.joblib"
+
+    if os.path.exists(vec_path) and os.path.exists(mat_path):
+        vectorizer = joblib.load(vec_path)
+        tf_idf_matrix = joblib.load(mat_path)
+    else:
+        vectorizer = TfidfVectorizer()
+        tf_idf_matrix = vectorizer.fit_transform(fulfilled['corpus'])
+        joblib.dump(vectorizer, vec_path)
+        joblib.dump(tf_idf_matrix, mat_path)
+
     return cosine_similarity(tf_idf_matrix)
 
 similarity_matrix = compute_similarity()
 
-# Reverse book name lookup
-prophets_book_numbers = {v: k for k, v in prophets_names.items()}
-fulfilled_book_numbers = {v: k for k, v in fulfilled_names.items()}
+# Reverse book maps
+prophets_num = {v: k for k, v in prophets_map.items()}
+fulfilled_num = {v: k for k, v in fulfilled_map.items()}
 
-# **Find Similar Verses Function**
-def top_verse(input_book, input_chapter, input_verse, top_n=10):
+# Find top similar verses
+
+def top_verse(book, chapter, verse, top_n=10):
     try:
-        book_num = str(prophets_book_numbers.get(input_book, ""))
-        locator = prophets.loc[
-            (prophets['b'].astype(str) == book_num) &
-            (prophets['c'].astype(str) == str(input_chapter)) &
-            (prophets['v'].astype(str) == str(input_verse))
-        ]
+        book_num = prophets_num.get(book)
+        locator = prophets[(prophets['b'] == book_num) &
+                           (prophets['c'] == chapter) &
+                           (prophets['v'] == verse)]
+
         if locator.empty:
             return pd.DataFrame(columns=["Book", "Chapter", "Verse", "Text", "Similarity Score"])
+
         idx = locator.index[0]
-        similarity_scores = list(enumerate(similarity_matrix[idx]))
-        similarity_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
-        sim_indices = [i[0] for i in similarity_scores[1:top_n + 1]]
-        sim_values = [i[1] for i in similarity_scores[1:top_n + 1]]
+        scores = list(enumerate(similarity_matrix[idx]))
+        scores = sorted(scores, key=lambda x: x[1], reverse=True)
+
+        sim_indices = [i[0] for i in scores[1:top_n+1]]
+        sim_values = [i[1] for i in scores[1:top_n+1]]
+
         recommended = fulfilled.iloc[sim_indices].copy()
         recommended['Similarity Score'] = sim_values
         recommended = recommended[['Book Name', 'c', 'v', 't', 'Similarity Score']]
         recommended.columns = ["Book", "Chapter", "Verse", "Text", "Similarity Score"]
         recommended = recommended[recommended['Book'].notna()]
+
         return recommended
     except Exception as e:
-        st.error(f"Error in recommendation: {e}")
+        st.error(f"Error: {e}")
         return pd.DataFrame(columns=["Book", "Chapter", "Verse", "Text", "Similarity Score"])
 
-##################################################################################################################
-
+# Streamlit UI
 st.title("📖 Prophecy Verse Search")
-st.info("Enter a Book, Chapter and Verse ➡️ click 'Find Prophecy Fulfillment Verses' to find New Testament Bible verses where Old Testament Prophecies were fulfilled.")
-st.markdown("[Review Prophecies and Corresponding Fullfillment Verses](https://www.jesusfilm.org/blog/old-testament-prophecies/)")
+st.info("Enter a Book, Chapter and Verse ➡️ click 'Find Prophecy Fulfillment Verses' to find New Testament verses fulfilling Old Testament prophecies.")
+st.markdown("[Reference: 351 OT Prophecies Fulfilled in NT](https://www.jesusfilm.org/blog/old-testament-prophecies/)")
 
-with st.form("user_input"):
+with st.form("verse_form"):
     col1, col2, col3 = st.columns(3)
     with col1:
-        input_book = st.selectbox("Select Book", prophets_names.values())
+        input_book = st.selectbox("Book", prophets_map.values())
     with col2:
-        input_chapter = st.number_input("Chapter", min_value=1, max_value=150, value=1, step=1)
+        input_chapter = st.number_input("Chapter", min_value=1, max_value=150, value=1)
     with col3:
-        input_verse = st.number_input("Verse", min_value=1, max_value=176, value=1, step=1)
+        input_verse = st.number_input("Verse", min_value=1, max_value=176, value=1)
 
-    #top_n = st.slider("Number of Verses to Examine", min_value=1, max_value=50, value=10, step=5)
-
-    submitted = st.form_submit_button("➡️Find Prophecy Fulfillment Verses")
+    #top_n = st.slider("Number of Results", 1, 50, 10)
+    submitted = st.form_submit_button("➡️ Find Prophecy Fulfillment Verses")
 
 if submitted:
     results = top_verse(input_book, input_chapter, input_verse, top_n=10)
@@ -151,5 +142,3 @@ if submitted:
             st.write(f"**Text:** {row['Text']} (Similarity: {row['Similarity Score']:.2f})")
     else:
         st.write("Verse not found.")
-
-    #st.dataframe(results.style.set_properties(subset=['Text'], **{'white-space': 'normal'}))
