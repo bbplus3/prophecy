@@ -6,14 +6,15 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from nltk.corpus import stopwords
 import streamlit as st
-
 # streamlit run fulfilled_prophecy.py
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
 # Download necessary NLTK resources
-nltk.download('stopwords')
+#nltk.download('stopwords')
+
+stop_words = ['all', 'd', 'to', 'any', "he'd", "we've", 'this', 'have', 'whom', "isn't", "wasn't", 'own', 'now', 'do', "mightn't", 'but', 'didn', 'yourselves', 'under', "i've", 'ma', 'll', 'his', 've', 'is', "haven't", 'over', 'doesn', "he's", 'her', 'y', 'your', "you've", 'each', 'the', "she'll", 'did', "you'll", 'until', "wouldn't", 'during', 'some', 'he', 'than', "didn't", 'then', 'with', 'weren', 'had', "it's", 'and', 'don', "should've", 'few', "it'll", 'there', 'which', 'why', 'hadn', "we're", 'should', 'other', "i'll", 'an', 'been', 'mustn', 'herself', "needn't", 'above', "hasn't", 'both', 'will', 'only', "we'll", 'before', 'here', "we'd", 'mightn', 'again', 'what', "you'd", "shouldn't", 'ain', 'has', 'me', "i'd", 'were', "aren't", 'so', "she's", "hadn't", 'she', 'o', 'from', 'haven', 'on', 'ours', "they've", 'very', "don't", 'down', 'further', 'it', 'by', 'once', 'if', 'doing', 'are', 'no', 'i', 'through', 'yours', 'about', "she'd", 'most', 'how', "mustn't", 'as', 'couldn', 'myself', 'being', 'their', 'was', 'between', 'wasn', 'isn', 'or', 'into', 'when', 'them', 're', "they're", 't', 'him', "couldn't", 'shouldn', 'who', 'my', "doesn't", 'where', 'at', 'off', 'hasn', 'yourself', 'for', 'its', "won't", 'such', "he'll", 'hers', 'be', 'wouldn', 's', 'after', 'not', 'same', 'these', 'that', 'below', "shan't", "they'll", 'nor', 'they', 'having', 'too', 'himself', 'those', 'out', "i'm", 'itself', 'just', 'while', 'does', "that'll", 'theirs', "they'd", 'in', 'can', 'of', 'am', 'because', "it'd", 'm', 'more', 'you', "weren't", 'we', 'won', 'themselves', 'ourselves', 'a', 'aren', "you're", 'up', 'shan', 'our', 'against', 'needn']
 
 # Streamlit Page Configuration
 st.set_page_config(page_title="Prophecy Fulfillment", layout="wide")
@@ -39,10 +40,9 @@ def load_prophets():
     prophets['Book Name'] = prophets['b'].map(prophets_names)
 
     # Process text: Remove stopwords
-    stop_words = set(stopwords.words('english'))
+    #stop_words = set(stopwords.words('english'))
     prophets['corpus'] = prophets['t'].astype(str).str.lower().apply(
-        lambda x: ' '.join([word for word in x.split() if word not in stop_words])
-    )
+        lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
 
     return prophets, prophets_names
 
@@ -70,8 +70,7 @@ def load_fulfilled():
     # Process text: Remove stopwords
     stop_words = set(stopwords.words('english'))
     fulfilled['corpus'] = fulfilled['t'].astype(str).str.lower().apply(
-        lambda x: ' '.join([word for word in x.split() if word not in stop_words])
-    )
+        lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
 
     return fulfilled, fulfilled_names
 
