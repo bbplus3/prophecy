@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import warnings
 import nltk
+NLTK_DATA="./resources/nltk_data_dir/"
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from nltk.corpus import stopwords
