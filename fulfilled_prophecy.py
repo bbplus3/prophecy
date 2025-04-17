@@ -68,7 +68,7 @@ def load_fulfilled():
     fulfilled['Book Name'] = fulfilled['b'].map(fulfilled_names)
 
     # Process text: Remove stopwords
-    stop_words = set(stopwords.words('english'))
+    #stop_words = set(stopwords.words('english'))
     fulfilled['corpus'] = fulfilled['t'].astype(str).str.lower().apply(
         lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
 
